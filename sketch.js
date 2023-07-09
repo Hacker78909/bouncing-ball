@@ -1,89 +1,135 @@
-/*
- * Skeleton of a ball bouncing /game/.
- * Keith O'Hara <kohara@bard.edu>
- */
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.Timer;
+import java.util.Random;
 
-var paddle_x, paddle_y;
-var paddle_w, paddle_h;
-var paddle_step;
+public class BouncingBallGame extends JPanel implements KeyListener, ActionListener {
+    private int paddleX = 200;
+    private int paddleY = 450;
+    private int ballX;
+    private int ballY;
+    private int ballXSpeed = 1;
+    private int ballYSpeed = 1;
+    private int score = 0;
+    private int highestScore = 0;
+    private boolean gameOver = false;
+    private JButton restartButton;
+    private Timer timer;
+    private Random random;
 
-var ball_x, ball_y;
-var ball_r;
-var ball_x_step, ball_y_step;
+    public BouncingBallGame() {
+        JFrame frame = new JFrame("Bouncing Ball Game");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Set the frame to full screen
+        frame.setUndecorated(true); // Remove the frame decorations
+        frame.addKeyListener(this);
 
+        restartButton = new JButton("Restart");
+        restartButton.setBounds(200, 225, 100, 50);
+        restartButton.addActionListener(this);
+        restartButton.setVisible(false);
+        frame.add(restartButton);
 
-function setup() {
-    createCanvas(600, 300);
-    paddle_h = 16;
-    paddle_w = 6 * paddle_h;
-    paddle_x = width / 2;
-    paddle_y = height - paddle_h;
-    paddle_step = 0;
-    ball_r = 13;
-    reset();
-}
+        frame.add(this);
+        frame.setVisible(true);
 
-function draw() {
-    background(196);
+        random = new Random();
+        ballX = random.nextInt(getWidth() - 20);
+        ballY = random.nextInt(getHeight() - 20);
 
-    // move paddle
-    //paddle_x += (mouseX - paddle_x) * .1;
-    paddle_x = paddle_x + paddle_step;
-
-    // is the ball hitting the right or left wall?
-    if (ball_x - ball_r < 0 || ball_x + ball_r > width) {
-	ball_x_step = -ball_x_step;
+        timer = new Timer(10, this);
+        timer.start();
     }
 
-    // hitting the top?
-    if (ball_y - ball_r < 0) {
-	ball_y_step = -ball_y_step;
+    private void moveBall() {
+        ballX += ballXSpeed;
+        ballY += ballYSpeed;
+
+        if (ballX <= 0 || ballX >= getWidth() - 20) {
+            ballXSpeed = -ballXSpeed;
+        }
+        if (ballY <= 0 || ballY >= getHeight() - 20) {
+            ballYSpeed = -ballYSpeed;
+        }
+
+        if (ballX < paddleX + 80 && ballX + 20 > paddleX && ballY < paddleY + 10 && ballY + 20 > paddleY) {
+            ballYSpeed = -ballYSpeed;
+            score++;
+        } else if (ballY >= getHeight() - 20) {
+            gameOver = true;
+        }
     }
 
-    // hitting the paddle?
-    if (ball_y + ball_r > paddle_y) {
-	if (ball_x >= paddle_x && ball_x <= paddle_x + paddle_w) {
-	    ball_y_step = -ball_y_step;
-	    ball_y = paddle_y - ball_r;
-	}
-	else if (ball_y + ball_r > paddle_y){
-	    reset();
-	}
+    @Override
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.setColor(Color.BLUE);
+        g.fillOval(ballX, ballY, 20, 20);
+        g.setColor(Color.RED);
+        g.fillRect(paddleX, paddleY, 80, 10);
+
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("Score: " + score, 10, 20);
+        g.drawString("Highest Score: " + highestScore, 10, 40);
+
+        if (gameOver) {
+            g.setFont(new Font("Arial", Font.BOLD, 20));
+            g.drawString("Game Over", 200, 200);
+            timer.stop();
+            restartButton.setVisible(true);
+        }
     }
 
-    // move ball by ball_x_step and ball_y_step
-    ball_x = ball_x + ball_x_step;
-    ball_y = ball_y + ball_y_step;
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == timer) {
+            moveBall();
+            repaint();
+        } else if (e.getSource() == restartButton) {
+            gameOver = false;
+            restartButton.setVisible(false);
+            ballX = random.nextInt(getWidth() - 20);
+            ballY = random.nextInt(getHeight() - 20);
+            ballXSpeed = 1;
+            ballYSpeed = 1;
+            score = 0;
+            timer.start();
+        }
+    }
 
-    //draw ball
-    noStroke();
-    fill(196, 0, 0);
-    ellipse(ball_x, ball_y, ball_r * 2, ball_r * 2);
+    @Override
+    public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+            paddleX -= 10;
+        } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+            paddleX += 10;
+        }
 
-    // draw paddle
-    stroke(24);
-    fill(64);
-    rect(paddle_x, paddle_y, paddle_w, paddle_h);
-}
+        if (paddleX < 0) {
+            paddleX = 0;
+        } else if (paddleX > getWidth() - 80) {
+            paddleX = getWidth() - 80;
+        }
+    }
 
-function reset() {
-    ball_x = random(ball_r, width - ball_r);
-    ball_y = random(ball_r, height / 2);
-    ball_x_step = random(-3, 3);
-    ball_y_step = random(1, 3);
-}
+    @Override
+    public void keyReleased(KeyEvent e) {
+    }
 
-function keyPressed() {
-    if (keyCode == LEFT_ARROW) {
-	paddle_step = -3;
-    } else if (keyCode == RIGHT_ARROW) {
-	paddle_step = 3;
-    } else if (key == ' ') {
-	reset();
+    @Override
+    public void keyTyped(KeyEvent e) {
+    }
+
+    public static void main(String[] args) {
+        new BouncingBallGame();
     }
 }
-
-function keyReleased() {
-    paddle_step = 0;
-}
-
